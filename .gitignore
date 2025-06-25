@@ -1,0 +1,23 @@
+# Ignore Visual Studio Code settings
+.vscode/
+
+# Ignore object files and compiled binaries
+*.o
+*.obj
+*.so
+*.a
+*.dll
+*.exe
+*.out
+
+# Ignore build directories
+build/
+Build/
+bin/
+Bin/
+dist/
+
+# Ignore logs and temporary files
+*.log
+*.tmp
+*.swp

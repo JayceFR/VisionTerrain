@@ -1,0 +1,80 @@
+Positions vs Texture Coordinates (uvs)
+
+positions are respective to the entire screen. The center of the screen is (0.0,0.0,0.0)
+Texture coordinates are coordinates respective to the texture. 
+so for example 
++-------------------------+
+|                         |
+|      A picture of       |
+|      a brick wall       |
+|                         |
++-------------------------+
+     (0,1)       (1,1)
+       ^           ^
+       |           |
+     top-left    top-right
+       |           |
+     (0,0)       (1,0)
+Here brick wall is the texture. (0,0) is the bottom left corner of the texture
+as a sidenote uvs are always positive...
+Now we need to create a map between the position vertices to the uvs. 
+Here is where we define 
+// position         // texture coords
+-0.5f, -0.5f, 0.0f,  0.0f, 0.0f,   // bottom-left of quad -> bottom-left of image
+ 0.5f, -0.5f, 0.0f,  1.0f, 0.0f,   // bottom-right        -> bottom-right
+ 0.5f,  0.5f, 0.0f,  1.0f, 1.0f,   // top-right           -> top-right
+-0.5f,  0.5f, 0.0f,  0.0f, 1.0f    // top-left            -> top-left
+Interestingly if we instead write the following mapping 
+// position         // texture coords
+-0.5f, -0.5f, 0.0f,  0.5f, 0.5f,   // mid-point of image
+ 0.5f, -0.5f, 0.0f,  1.0f, 0.5f,
+ 0.5f,  0.5f, 0.0f,  1.0f, 1.0f,
+-0.5f,  0.5f, 0.0f,  0.5f, 1.0f
+WE WOULD GET ONLY THE TOP RIGHT QUARTER OF THE IMAGE... WOAH!!
+
+-----------------------------------------------------------------------------
+
+VBO - Vertex Buffer Object 
+
+A VBO stores your raw vertex data (like positions, colors, textureCoords) on the GPU.
+Analogy : You're saying:
+"Hey GPU, here are some numbers (vertex data). Store them in this buffer."
+
+VAO - Vertex Array Object 
+
+A VAO stores the layout of vertex data. It tells OpenGL:
+Where is the data located in the VBO
+How to interpret them 
+What type of data is it (position, uvs, colors, etc)
+Think of VAO as a schema + pointer to your vertex buffer. 
+
+EBO - Element Buffer Object 
+
+Helps in reusing vertices while defining the VBO. 
+Look at the indices 
+unsigned int indices[] = {
+  0, 1, 2,  // first triangle 
+  0, 2, 3  // second triangle
+};
+
+-----------------------------------------------------------------------------
+
+Projection Matrix 
+
+Why Do We Need the Projection Matrix?
+Because we want to simulate perspective or a camera lens.
+
+✅ Without projection:
+A cube 1 unit away and a cube 10 units away will appear the same size.
+No sense of depth.
+No perspective shrinking or field of view.
+
+✅ With projection:
+Distant objects look smaller (perspective).
+Closer objects take up more screen space.
+You can define a camera's field of view (FOV), near plane, far plane, etc.
+
+Analogy
+Imagine taking a photograph:
+The scene is infinite, but the camera lens projects it onto a flat image (your screen).
+The projection matrix is like that lens. Without it, you’d just be drawing on a flat canvas, not capturing 3D space.
