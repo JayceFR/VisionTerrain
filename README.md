@@ -1,5 +1,11 @@
 # 3d Terrain Generator which is explorable without a mouse!
 
+![Scenary](imgs/scenary.gif)
+
+![Lighting](imgs/lighting.gif)
+
+![Camera](imgs/camera.gif)
+
 ## Introduction
 This project was initially as a part of the C Group Project at Imperial. It was coded as an extension exercise to coding an assembler and emulator in C. 
 As an extension task, we developed a 3D terrain generator and implemented camera movement con
