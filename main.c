@@ -231,6 +231,31 @@ int main(){
   glGenerateMipmap(GL_TEXTURE_2D);
   stbi_image_free(data);
 
+  checkOpenGLError("depth error stuff");
+
+
+  width = 512; height = 512; nrChannels = 3; 
+  stbi_set_flip_vertically_on_load(1);
+  unsigned char *data2 = stbi_load("texture/waterDUDV.png", &width, &height, &nrChannels, 0);
+  assert(data2 != NULL);
+
+  GLuint dudvTexture;
+  glGenTextures(1, &dudvTexture);
+  glBindTexture(GL_TEXTURE_2D, dudvTexture);
+
+  checkOpenGLError("Loading textures");
+
+  // set properties of the texture
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+  format = (nrChannels == 3) ? GL_RGB : GL_RGBA;
+  glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data2);
+  glGenerateMipmap(GL_TEXTURE_2D);
+  stbi_image_free(data2);
+
   glEnable(GL_DEPTH_TEST);
 
   glfwSwapInterval(1);
@@ -468,7 +493,7 @@ int main(){
     setPitch(cam, -getPitch(cam));
     vec3d newUp = constructVec3d(0.0f, 1.0f, 0.0f);
     view = lookAt(getPosition(cam), add(getPosition(cam), getFrontVector(getYaw(cam), getPitch(cam))), newUp);
-    renderWorld(game, getPosition(cam), program, waterShader, view, matProj, lightPos, viewPos, currTime, texture, true, dubTex);
+    renderWorld(game, getPosition(cam), program, waterShader, view, matProj, lightPos, viewPos, currTime, texture, true, dubTex, dudvTexture);
     setYPosition(cam, getPosition(cam)->y + distance);
     setPitch(cam, -getPitch(cam));
     // reset to normal frame buffer
@@ -477,7 +502,7 @@ int main(){
     view = lookAt(getPosition(cam), add(getPosition(cam), front), up);
 
     // render the world
-    renderWorld(game, getPosition(cam), program, waterShader, view, matProj, lightPos, viewPos, currTime, texture, false, dubTex);
+    renderWorld(game, getPosition(cam), program, waterShader, view, matProj, lightPos, viewPos, currTime, texture, false, dubTex, dudvTexture);
 
     // render the ui 
     glEnable(GL_BLEND);

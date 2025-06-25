@@ -59,7 +59,8 @@ GLuint compileShader(char *vertexShaderLoc, char *fragmentShaderLoc){
 void useShader(GLuint program, 
                mat4x4 model, mat4x4 view, mat4x4 proj, 
                vec3d lightPos, vec3d viewPos, 
-               float time, GLuint texture, GLuint reflectedTex) 
+               float time, GLuint texture, 
+               GLuint reflectedTex, GLuint dudvTex) 
 {
     glUseProgram(program);
     glActiveTexture(GL_TEXTURE0);
@@ -104,4 +105,9 @@ void useShader(GLuint program,
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, reflectedTex);
     glUniform1i(reflectedLoc, 1);
+
+    GLuint dudvLoc = glGetUniformLocation(program, "dudvMap");
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, dudvTex);
+    glUniform1i(dudvLoc, 2);
 }

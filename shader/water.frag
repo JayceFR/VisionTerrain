@@ -14,6 +14,7 @@ uniform vec3 lightPos;
 uniform sampler2D baseTexture;
 
 uniform sampler2D reflectedTexture; 
+uniform sampler2D dudvMap; 
 
 uniform float time;
 
@@ -56,16 +57,31 @@ float fbm(vec2 uv) {
     return value;
 }
 
+float waveStrength = 0.02;
+const vec2 SCROLL_SPEED = vec2(0.07, 0.03);
+
 void main() {
     vec2 ndc = (clipSpace.xy/clipSpace.w)/2.0 + 0.5;
     vec2 reflectUvs = vec2(ndc.x, 1.0 -ndc.y);
+ 
+    float moveFactor = fract(0.04 * time);
+    vec2 scroll = fract(uvs + time * SCROLL_SPEED);
+
+    vec2 distortion1 = (texture(dudvMap, vec2(uvs.x + moveFactor, uvs.y)).rg * 2.0 - 1.0) * waveStrength;
+    vec2 distortion2 = (texture(dudvMap, vec2(-uvs.x + moveFactor, uvs.y + moveFactor)).rg * 2.0 - 1.0) * waveStrength;
+    reflectUvs += distortion1 + distortion2;
+
     float fresnel = pow(1.0 - dot(normalize(normal), normalize(viewPos - FragPos)), 3.0);
     if (reflectUvs.x < 0.0 || reflectUvs.x > 1.0 || reflectUvs.y < 0.0 || reflectUvs.y > 1.0) {
         discard;
     }
     vec4 reflColor = texture(reflectedTexture, reflectUvs);
-    vec4 baseColor = vec4(0.0, 0.0, 0.5, 1.0);
-    FragColor = reflColor ;
+    vec4 baseColor = vec4(0.0, 0.3, 0.5, 1.0);
+    FragColor = mix(reflColor, baseColor, 0.2) ;
+
+
+
+
     // // Smoothed FBM (less contrast)
     // float n1 = fbm(worldUV * 2.5 + vec2(time * 0.3, time * 0.2));
     // float n2 = fbm(worldUV * 6.0 - vec2(time * 0.5, time * 0.3));

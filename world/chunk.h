@@ -52,6 +52,6 @@ extern void renderChunk(
   vec3d lightPos,
   vec3d viewPos,
   float time, GLuint texture, 
-  bool fake, GLuint reflectedTex);
+  bool fake, GLuint reflectedTex, GLuint dudvTex);
 
 #endif
