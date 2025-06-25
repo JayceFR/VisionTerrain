@@ -49,6 +49,10 @@ void setPosition(camera cam, vec3d position){
   cam->position = position;
 }
 
+void setYPosition(camera cam, float new_y){
+  cam->position->y = new_y;
+}
+
 // Make sure to free it after usage
 vec3d getFrontVector(float yaw, float pitch){
   float x = cosf(radians(yaw)) * cosf(radians(pitch));

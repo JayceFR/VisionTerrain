@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <stdio.h>
+#include <stdbool.h>
 
 #include "glad/glad.h"
 #include <GLFW/glfw3.h>
@@ -56,7 +57,8 @@ void renderWorld(
   mat4x4 proj,
   vec3d lightPos,
   vec3d viewPos,
-  float time, GLuint texture
+  float time, GLuint texture, 
+  bool fake, GLuint reflectedTex
 ) {
   int renderDistance = 5; 
 
@@ -78,7 +80,7 @@ void renderWorld(
 
       chunk c = hashFind(w->chunks, buffer);
       if (c != NULL) {
-        renderChunk(c, program, waterShader, view, proj, lightPos, viewPos, time, texture);
+        renderChunk(c, program, waterShader, view, proj, lightPos, viewPos, time, texture, fake, reflectedTex);
       }
     }
   }

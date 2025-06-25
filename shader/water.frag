@@ -6,11 +6,14 @@ out vec4 FragColor;
 
 in vec3 normal;
 in vec3 FragPos;
-in vec3 viewPos;
+uniform vec3 viewPos;
+in vec4 clipSpace;
 
 uniform vec3 lightColor;
 uniform vec3 lightPos;
 uniform sampler2D baseTexture;
+
+uniform sampler2D reflectedTexture; 
 
 uniform float time;
 
@@ -53,72 +56,80 @@ float fbm(vec2 uv) {
     return value;
 }
 
-// --- Main Fragment Shader ---
 void main() {
-    // Smoothed FBM (less contrast)
-    float n1 = fbm(worldUV * 2.5 + vec2(time * 0.3, time * 0.2));
-    float n2 = fbm(worldUV * 6.0 - vec2(time * 0.5, time * 0.3));
-    float combinedNoise = 0.5 * n1 + 0.5 * n2;
-    float noise01 = (combinedNoise + 1.0) * 0.5;
+    vec2 ndc = (clipSpace.xy/clipSpace.w)/2.0 + 0.5;
+    vec2 reflectUvs = vec2(ndc.x, 1.0 -ndc.y);
+    float fresnel = pow(1.0 - dot(normalize(normal), normalize(viewPos - FragPos)), 3.0);
+    if (reflectUvs.x < 0.0 || reflectUvs.x > 1.0 || reflectUvs.y < 0.0 || reflectUvs.y > 1.0) {
+        discard;
+    }
+    vec4 reflColor = texture(reflectedTexture, reflectUvs);
+    vec4 baseColor = vec4(0.0, 0.0, 0.5, 1.0);
+    FragColor = reflColor ;
+    // // Smoothed FBM (less contrast)
+    // float n1 = fbm(worldUV * 2.5 + vec2(time * 0.3, time * 0.2));
+    // float n2 = fbm(worldUV * 6.0 - vec2(time * 0.5, time * 0.3));
+    // float combinedNoise = 0.5 * n1 + 0.5 * n2;
+    // float noise01 = (combinedNoise + 1.0) * 0.5;
 
-    // Ocean swell
-    float swell = 0.2 * sin(worldUV.x * 1.5 + time * 0.8)
-                + 0.15 * sin(worldUV.y * 1.8 - time * 1.0)
-                + 0.1 * sin((worldUV.x + worldUV.y) * 1.2 + time * 0.5);
-    float verticalWave = swell;
+    // // Ocean swell
+    // float swell = 0.2 * sin(worldUV.x * 1.5 + time * 0.8)
+    //             + 0.15 * sin(worldUV.y * 1.8 - time * 1.0)
+    //             + 0.1 * sin((worldUV.x + worldUV.y) * 1.2 + time * 0.5);
+    // float verticalWave = swell;
 
-    // Animate slight flow motion
-    vec2 waveOffset = vec2(
-        sin(worldUV.y * 0.3 + time * 0.5),
-        cos(worldUV.x * 0.3 - time * 0.5)
-    ) * 0.1 * combinedNoise;
+    // // Animate slight flow motion
+    // vec2 waveOffset = vec2(
+    //     sin(worldUV.y * 0.3 + time * 0.5),
+    //     cos(worldUV.x * 0.3 - time * 0.5)
+    // ) * 0.1 * combinedNoise;
 
-    vec2 warpedUV = worldUV + waveOffset;
+    // vec2 warpedUV = worldUV + waveOffset;
 
-    // Wave tile variation
-    float waveX = 0.5 + 0.5 * sin(warpedUV.x * 0.15 + combinedNoise + verticalWave);
-    float waveY = 0.5 + 0.5 * sin(warpedUV.y * 0.1 + combinedNoise + verticalWave);
+    // // Wave tile variation
+    // float waveX = 0.5 + 0.5 * sin(warpedUV.x * 0.15 + combinedNoise + verticalWave);
+    // float waveY = 0.5 + 0.5 * sin(warpedUV.y * 0.1 + combinedNoise + verticalWave);
 
-    // Brightness
-    float brightness = clamp(smoothstep(0.3, 0.7, noise01 + verticalWave * 0.3), 0.4, 0.75);
+    // // Brightness
+    // float brightness = clamp(smoothstep(0.3, 0.7, noise01 + verticalWave * 0.3), 0.4, 0.75);
 
-    // Colors
-    vec3 deepBlue = vec3(0.04, 0.08, 0.15);
-    vec3 midBlue = vec3(0.08, 0.14, 0.25);
-    vec3 crestBlue = vec3(0.25, 0.4, 0.55);
-    vec3 waveColor = mix(midBlue, crestBlue, pow(waveY, 2.0));
-    vec3 baseColor = mix(deepBlue, waveColor, waveX);
+    // // Colors
+    // vec3 deepBlue = vec3(0.04, 0.08, 0.15);
+    // vec3 midBlue = vec3(0.08, 0.14, 0.25);
+    // vec3 crestBlue = vec3(0.25, 0.4, 0.55);
+    // vec3 waveColor = mix(midBlue, crestBlue, pow(waveY, 2.0));
+    // vec3 baseColor = mix(deepBlue, waveColor, waveX);
 
-    vec3 color = baseColor * brightness;
+    // vec3 color = baseColor * brightness;
 
-    // Gentle crest shimmer
-    float crest = smoothstep(0.75, 1.0, noise01 + verticalWave * 0.4);
-    vec3 shimmer = vec3(1.0, 0.8, 0.9) * crest * 0.08;
-    color += shimmer;
+    // // Gentle crest shimmer
+    // float crest = smoothstep(0.75, 1.0, noise01 + verticalWave * 0.4);
+    // vec3 shimmer = vec3(1.0, 0.8, 0.9) * crest * 0.08;
+    // color += shimmer;
 
-    // Final tint
-    color = mix(color, vec3(0.7, 0.5, 0.6), 0.03);
-    color += verticalWave * 0.03 * vec3(0.03, 0.06, 0.1);
-    color = clamp(color, 0.0, 1.0);
+    // // Final tint
+    // color = mix(color, vec3(0.7, 0.5, 0.6), 0.03);
+    // color += verticalWave * 0.03 * vec3(0.03, 0.06, 0.1);
+    // color = clamp(color, 0.0, 1.0);
 
-    // Lighting
-    vec3 norm = normalize(normal);
-    vec3 lightDir = normalize(lightPos - FragPos);
-    lightDir.x += sin(time) * 0.2;
-    lightDir.y += cos(time) * 0.2;
+    // // Lighting
+    // vec3 norm = normalize(normal);
+    // vec3 lightDir = normalize(lightPos - FragPos);
+    // lightDir.x += sin(time) * 0.2;
+    // lightDir.y += cos(time) * 0.2;
 
-    float diff = max(dot(norm, lightDir), 0.0);
-    vec3 diffuse = diff * lightColor;
+    // float diff = max(dot(norm, lightDir), 0.0);
+    // vec3 diffuse = diff * lightColor;
 
-    float ambientStrength = 0.3;
-    vec3 ambient = ambientStrength * lightColor;
+    // float ambientStrength = 0.3;
+    // vec3 ambient = ambientStrength * lightColor;
 
-    vec3 viewDir = normalize(viewPos - FragPos);
-    vec3 halfwayDir = normalize(lightDir + viewDir);
-    float spec = pow(max(dot(norm, halfwayDir), 0.0), 32.0);
-    vec3 specular = vec3(0.3) * spec;
+    // vec3 viewDir = normalize(viewPos - FragPos);
+    // vec3 halfwayDir = normalize(lightDir + viewDir);
+    // float spec = pow(max(dot(norm, halfwayDir), 0.0), 32.0);
+    // vec3 specular = vec3(0.3) * spec;
 
-    vec3 finalColor = (ambient + diffuse + specular) * color;
+    // vec3 finalColor = (ambient + diffuse + specular) * color;
 
-    FragColor = vec4(finalColor, 1.0);
+    // FragColor = vec4(finalColor, 1.0);
 }

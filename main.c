@@ -78,33 +78,6 @@ void mouseCallback(GLFWwindow* window, double xpos, double ypos) {
 
 }
 
-// bool getHeadPosFromPython(float *yawOut, float *pitchOut){
-//   static int sockfd = -1; 
-//   static struct sockaddr_in addr;
-
-//   if (sockfd < 0){
-//     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-//     addr.sin_family = AF_INET;
-//     addr.sin_port = htons(5005);
-//     addr.sin_addr.s_addr = INADDR_ANY;
-//     bind(sockfd, (struct sockaddr*)&addr, sizeof(addr));
-//   }
-
-//   char buffer[64] = {0};
-//   ssize_t len = recv(sockfd, buffer, sizeof(buffer) - 1, MSG_DONTWAIT);
-
-//   if (len > 0){
-//     float yaw, pitch;
-//     if (sscanf(buffer, "%f, %f", &yaw, &pitch) == 2){
-//       *yawOut = yaw;
-//       *pitchOut = pitch; 
-//       return true; 
-//     }
-//   }
-//   printf("No value read\n");
-//   return false; 
-// }
-
 typedef struct { float x, y, z; } Point3D;
 #define MAX_LANDMARKS 32
 
@@ -293,6 +266,31 @@ int main(){
   glEnableVertexAttribArray(0);
   glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
 
+  // fake screen
+  GLuint dubFbo, dubTex, dubDepth;
+  initFBO(SCREEN_WIDTH, SCREEN_HEIGHT, &dubFbo, &dubTex, &dubDepth);
+  float dupScreen[] = {
+  0.0f,  0.0f,  0.0f, 0.0f,  // top-left of bottom-right quadrant
+  0.0f, -1.0f,  0.0f, 1.0f,  // bottom-left of bottom-right quadrant
+  1.0f, -1.0f,  1.0f, 1.0f,  // bottom-right of bottom-right quadrant
+
+  0.0f,  0.0f,  0.0f, 0.0f,  // top-left
+  1.0f, -1.0f,  1.0f, 1.0f,  // bottom-right
+  1.0f,  0.0f,  1.0f, 0.0f   // top-right
+};
+
+
+  GLuint dupScreenVAO, dupScreenVBO;
+  glGenVertexArrays(1, &dupScreenVAO);
+  glGenBuffers(1, &dupScreenVBO);
+  glBindVertexArray(dupScreenVAO);
+  glBindBuffer(GL_ARRAY_BUFFER, dupScreenVBO);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(dupScreen), dupScreen, GL_STATIC_DRAW);
+
+  glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+  glEnableVertexAttribArray(0);
+  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+  glEnableVertexAttribArray(1);
 
   // the mini face screen 
 
@@ -301,7 +299,7 @@ int main(){
   initFBO(256,256, &fbo, &fboTex, &fboDepth);
   // set up screen 
   float quad[] = {
-    // pos      // tex
+    // pos         // tex
     -1.0f,  1.0f, 0.0f, 1.0f,  // Top-left
     -1.0f,  0.75f, 0.0f, 0.0f, // Bottom-left
     -0.75f, 0.75f, 1.0f, 0.0f, // Bottom-right
@@ -453,8 +451,33 @@ int main(){
 
     float currTime = glfwGetTime();
 
+    // fake screen 
+    glBindFramebuffer(GL_FRAMEBUFFER, dubFbo);
+    glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    // render background to fake screen 
+    glDepthMask(GL_FALSE);
+    glUseProgram(skyShader); 
+    glBindVertexArray(skyVAO);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+    glDepthMask(GL_TRUE);
+    // render world to fake screen 
+    float distance = 2 * (getPosition(cam)->y - 3.0f);
+    setYPosition(cam, getPosition(cam)->y - distance);
+    setPitch(cam, -getPitch(cam));
+    vec3d newUp = constructVec3d(0.0f, 1.0f, 0.0f);
+    view = lookAt(getPosition(cam), add(getPosition(cam), getFrontVector(getYaw(cam), getPitch(cam))), newUp);
+    renderWorld(game, getPosition(cam), program, waterShader, view, matProj, lightPos, viewPos, currTime, texture, true, dubTex);
+    setYPosition(cam, getPosition(cam)->y + distance);
+    setPitch(cam, -getPitch(cam));
+    // reset to normal frame buffer
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+    view = lookAt(getPosition(cam), add(getPosition(cam), front), up);
+
     // render the world
-    renderWorld(game, getPosition(cam), program, waterShader, view, matProj, lightPos, viewPos, currTime, texture);
+    renderWorld(game, getPosition(cam), program, waterShader, view, matProj, lightPos, viewPos, currTime, texture, false, dubTex);
 
     // render the ui 
     glEnable(GL_BLEND);
@@ -483,6 +506,14 @@ int main(){
 
     glBindVertexArray(screenVAO);
     glDrawArrays(GL_TRIANGLES, 0, 6);
+
+    // test draw of fake screen 
+    // glUseProgram(faceShader);
+    // glActiveTexture(GL_TEXTURE0);
+    // glBindTexture(GL_TEXTURE_2D, dubTex);
+    // glUniform1i(glGetUniformLocation(faceShader, "screenTex"), 0);
+    // glBindVertexArray(dupScreenVAO);
+    // glDrawArrays(GL_TRIANGLES, 0, 6);
 
     checkOpenGLError("In loop");
 

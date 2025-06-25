@@ -59,7 +59,7 @@ GLuint compileShader(char *vertexShaderLoc, char *fragmentShaderLoc){
 void useShader(GLuint program, 
                mat4x4 model, mat4x4 view, mat4x4 proj, 
                vec3d lightPos, vec3d viewPos, 
-               float time, GLuint texture) 
+               float time, GLuint texture, GLuint reflectedTex) 
 {
     glUseProgram(program);
     glActiveTexture(GL_TEXTURE0);
@@ -99,4 +99,9 @@ void useShader(GLuint program,
     if (timeLoc != -1){
       glUniform1f(timeLoc, time);
     }
+
+    GLuint reflectedLoc = glGetUniformLocation(program, "reflectedTexture");
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, reflectedTex);
+    glUniform1i(reflectedLoc, 1);
 }

@@ -18,5 +18,6 @@ extern vec3d getPosition(camera cam);
 extern void setPosition(camera cam, vec3d position);
 extern void setYaw(camera cam, float value);
 extern void setPitch(camera cam, float value);
+extern void setYPosition(camera cam, float new_y);
 
 #endif

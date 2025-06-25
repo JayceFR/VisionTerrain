@@ -17,7 +17,8 @@ extern void renderWorld(
   mat4x4 proj,
   vec3d lightPos,
   vec3d viewPos,
-  float time, GLuint texture
+  float time, GLuint texture, 
+  bool fake, GLuint reflectedTex
 );
 
 #endif
