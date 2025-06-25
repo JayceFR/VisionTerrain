@@ -1,12 +1,15 @@
-# 3d WORLD
+# 3d Terrain Generator which is explorable without a mouse!
 
-## AIM 
-To create a basic 3d terrain with trees and real time lighting 
+## Introduction
+This project was initially as a part of the C Group Project at Imperial. It was coded as an extension exercise to coding an assembler and emulator in C. 
+As an extension task, we developed a 3D terrain generator and implemented camera movement con
+trolled by tracking facial data from a webcam. This approach was partly motivated by accessibility concerns, traditional mouse input can be difficult for individuals with physical disabilities. By using face tracking to control the camera, we explored an alternative approach of interaction, aiming to make 3D environments accessible to all
 
-## Planned tech stack to use
-1. GLFW   -> handle window and inputs
-2. glad   -> enables us to use OpenGL. 
-3. OpenGL -> shaders and drawing to the screen.
+## Tech stack used
+1. GLFW      -> handle window and inputs
+2. glad      -> enables us to use OpenGL. 
+3. OpenGL    -> shaders and drawing to the screen.
+4. MediaPipe -> to provide us with face mesh coordinates
 
 ## How to run
 ### Linux/MacOS
@@ -23,9 +26,6 @@ Run `./main`
 ### Windows 
 *HAVE FUN !! lol*
 
-## External libraries used
-1. GLAD 
-2. stb_image.h
 
 ## Things learnt 
 
