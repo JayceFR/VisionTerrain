@@ -10,6 +10,12 @@
 *.exe
 *.out
 
+# Ignore executables
+main
+main.exe
+*.out
+*.exe
+
 # Ignore build directories
 build/
 Build/
