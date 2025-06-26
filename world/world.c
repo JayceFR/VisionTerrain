@@ -58,7 +58,8 @@ void renderWorld(
   vec3d lightPos,
   vec3d viewPos,
   float time, GLuint texture, 
-  bool fake, GLuint reflectedTex, GLuint dudvTex
+  bool fake, GLuint reflectedTex, 
+  GLuint dudvTex, GLuint normalTex
 ) {
   int renderDistance = 5; 
 
@@ -80,7 +81,7 @@ void renderWorld(
 
       chunk c = hashFind(w->chunks, buffer);
       if (c != NULL) {
-        renderChunk(c, program, waterShader, view, proj, lightPos, viewPos, time, texture, fake, reflectedTex, dudvTex);
+        renderChunk(c, program, waterShader, view, proj, lightPos, viewPos, time, texture, fake, reflectedTex, dudvTex, normalTex);
       }
     }
   }

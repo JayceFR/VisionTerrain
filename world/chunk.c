@@ -427,7 +427,8 @@ void renderChunk(
   vec3d lightPos,
   vec3d viewPos,
   float time, GLuint texture, 
-  bool fake, GLuint reflectedTex, GLuint dudvTex)
+  bool fake, GLuint reflectedTex, 
+  GLuint dudvTex, GLuint normalTex)
 {
   if (c->dirty) {
     printf("Calling rebuild chunk mesh");
@@ -438,12 +439,12 @@ void renderChunk(
 
   mat4x4 model = constructTranslationMatrix(c->position->x, c->position->y, c->position->z);
   
-  useShader(program, model, view, proj, lightPos, viewPos, time, texture, reflectedTex, dudvTex);
+  useShader(program, model, view, proj, lightPos, viewPos, time, texture, reflectedTex, dudvTex, normalTex);
   glBindVertexArray(c->vao);
   glDrawArrays(GL_TRIANGLES, 0, c->numOfVertices);
 
   if (!fake){
-    useShader(waterShader, model, view, proj, lightPos, viewPos, time, texture, reflectedTex, dudvTex);
+    useShader(waterShader, model, view, proj, lightPos, viewPos, time, texture, reflectedTex, dudvTex, normalTex);
     glBindVertexArray(c->waterVao);
     glDrawArrays(GL_TRIANGLES, 0, c->numOfWaterVertices);
   }

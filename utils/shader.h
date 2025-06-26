@@ -19,6 +19,6 @@ extern void useShader(GLuint program,
               mat4x4 model, mat4x4 view, mat4x4 proj, 
                vec3d lightPos, vec3d viewPos, 
                float time, GLuint texture, 
-               GLuint reflectedTex, GLuint dudvTex);
+               GLuint reflectedTex, GLuint dudvTex, GLuint normalTex);
 
 #endif

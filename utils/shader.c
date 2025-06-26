@@ -60,7 +60,7 @@ void useShader(GLuint program,
                mat4x4 model, mat4x4 view, mat4x4 proj, 
                vec3d lightPos, vec3d viewPos, 
                float time, GLuint texture, 
-               GLuint reflectedTex, GLuint dudvTex) 
+               GLuint reflectedTex, GLuint dudvTex, GLuint normalTex) 
 {
     glUseProgram(program);
     glActiveTexture(GL_TEXTURE0);
@@ -110,4 +110,9 @@ void useShader(GLuint program,
     glActiveTexture(GL_TEXTURE2);
     glBindTexture(GL_TEXTURE_2D, dudvTex);
     glUniform1i(dudvLoc, 2);
+
+    GLuint normalLoc = glGetUniformLocation(program, "normalMap");
+    glActiveTexture(GL_TEXTURE3);
+    glBindTexture(GL_TEXTURE_2D, normalTex);
+    glUniform1i(normalLoc, 3);
 }
