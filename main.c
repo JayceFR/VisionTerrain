@@ -538,7 +538,7 @@ int main(){
     glUniformMatrix4fv(glGetUniformLocation(fireflyShader, "view"), 1, GL_TRUE, (float*)view->m);
     glUniform3f(glGetUniformLocation(fireflyShader, "cameraWorldPos"), getPosition(cam)->x,getPosition(cam)->y, getPosition(cam)->z);
 
-    int fireflyCount = 500;
+    int fireflyCount = 400;
     int tiles = (2 * 5 + 1) * (2 * 5 + 1);
     glPointSize(2.0f);
     glDrawArrays(GL_POINTS, 0, fireflyCount * tiles);
