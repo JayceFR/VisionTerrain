@@ -554,14 +554,6 @@ int main(){
     glBindVertexArray(screenVAO);
     glDrawArrays(GL_TRIANGLES, 0, 6);
 
-    // test draw of fake screen 
-    // glUseProgram(faceShader);
-    // glActiveTexture(GL_TEXTURE0);
-    // glBindTexture(GL_TEXTURE_2D, dubTex);
-    // glUniform1i(glGetUniformLocation(faceShader, "screenTex"), 0);
-    // glBindVertexArray(dupScreenVAO);
-    // glDrawArrays(GL_TRIANGLES, 0, 6);
-
     checkOpenGLError("In loop");
 
     glfwSwapBuffers(window);
