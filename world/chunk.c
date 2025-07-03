@@ -388,15 +388,6 @@ chunk createChunk(float x, float y, float z) {
 
           new->blocks[cx][cy+6][cz] = BLOCK_LEAF;
 
-          // #define CURRBLOCK new->blocks[cx + xoffset][cy + 6][cz + zoffset]
-          // for (int xoffset = -1; xoffset < 2; xoffset++){
-          //   for (int zoffset = -1; zoffset < 2; zoffset++){
-          //     if (CURRBLOCK == BLOCK_AIR){
-          //       CURRBLOCK = BLOCK_LEAF;
-          //     }
-          //   }
-          // }
-
         }
       }
     }

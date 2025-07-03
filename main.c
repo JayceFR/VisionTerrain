@@ -11,7 +11,6 @@
 #include "main.h"
 #include "utils/shader.h"
 #include "utils/math.h"
-// #include "world/chunk.h"
 #include "world/world.h"
 #include "world/camera.h"
 
