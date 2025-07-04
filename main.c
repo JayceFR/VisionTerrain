@@ -53,28 +53,31 @@ void mouseCallback(GLFWwindow* window, double xpos, double ypos) {
     lastX = xpos;
     lastY = ypos;
     firstMouse = false;
+    return;
   }
 
   float xoffset = (float)(xpos - lastX);
-  float yoffset = (float)(lastY - ypos); // Y is inverted
+  float yoffset = (float)(lastY - ypos);
 
   lastX = xpos;
   lastY = ypos;
 
-  float sensitivity = 0.0125f;
+  float sensitivity = 0.025f; 
   xoffset *= sensitivity;
   yoffset *= sensitivity;
 
-  setYaw(cam, getYaw(cam) + xoffset);
-  
-  float newPitch = getPitch(cam) + yoffset;
+  // Update yaw and pitch
+  float yaw = getYaw(cam) + xoffset;
+  float pitch = getPitch(cam) + yoffset;
 
   // Clamp pitch
-  if (getPitch(cam) > 89.0f) newPitch = 89.0f;
-  if (getPitch(cam) < -89.0f) newPitch = -89.0f;
+  if (pitch > 89.0f)
+      pitch = 89.0f;
+  if (pitch < -89.0f)
+      pitch = -89.0f;
 
-  setPitch(cam, newPitch);
-
+  setYaw(cam, yaw);
+  setPitch(cam, pitch);
 }
 
 typedef struct { float x, y, z; } Point3D;
