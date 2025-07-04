@@ -9,8 +9,8 @@
 #include "world.h"
 #include "../adts/hash.h"
 
-#define PLAYER_WIDTH 0.3f 
-#define PLAYER_HEIGHT 1.2f
+#define PLAYER_WIDTH 0.6f 
+#define PLAYER_HEIGHT 1.8f
 #define CHUNK_SIZE 16.0f 
 
 static bool collisionCheck(world w, vec3d newPos) {
@@ -59,30 +59,36 @@ static bool collisionCheck(world w, vec3d newPos) {
 }
 
 
-void physics(world w, camera cam, vec3d velocity){
-  vec3d cameraPos = getPosition(cam);
-  vec3d newPos = copyVector(cameraPos);
-  // check x first 
-  newPos->x += velocity->x;
-  if (collisionCheck(w, newPos)){
-    newPos->x = cameraPos->x;
+void physics(world w, camera cam, vec3d velocity, bool* isGrounded, float dt) {
+  *isGrounded = false;
+
+  vec3d originalPos = getPosition(cam);
+  vec3d testPos = copyVector(originalPos);
+
+  // Try Y first (gravity)
+  testPos->y += velocity->y * dt;
+  if (collisionCheck(w, testPos)) {
+    testPos->y = originalPos->y;
+    *isGrounded = true;
+    velocity->y = 0.0f;
   }
 
-  // y 
-  newPos->y += velocity->y;
-  if (collisionCheck(w, newPos)){
-    newPos->y = cameraPos->y;
+  // X: Start from the Y-resolved position
+  testPos->x += velocity->x * dt;
+  if (collisionCheck(w, testPos)) {
+    testPos->x = originalPos->x;
   }
 
-  // z
-  newPos->z += velocity->z;
-  if (collisionCheck(w, newPos)){
-    newPos->z = cameraPos->z;
+  // Z: Start from Y/X-resolved position
+  testPos->z += velocity->z * dt;
+  if (collisionCheck(w, testPos)) {
+    testPos->z = originalPos->z;
   }
 
-  setXPosition(cam, newPos->x);
-  setYPosition(cam, newPos->y);
-  setZPosition(cam, newPos->z);
+  // Apply position at the end
+  setXPosition(cam, testPos->x);
+  setYPosition(cam, testPos->y);
+  setZPosition(cam, testPos->z);
 
-  free(newPos);
+  free(testPos);
 }

@@ -340,6 +340,8 @@ int main(){
   vec3d lightPos = constructVec3d(100.0f, 100.0f, 100.0f);
   vec3d viewPos = constructVec3d(0.0f, 0.0f, 0.0f);
 
+  vec3d velocity = constructVec3d(0.0f, 0.0f, 0.0f);
+
   glEnable(GL_FRAMEBUFFER_SRGB);
 
   // GAME loop
@@ -362,18 +364,24 @@ int main(){
     right = cross(front, up);
     normalise(right);
 
+    vec3d flatFront = constructVec3d(front->x, 0.0f, front->z);
+    normalise(flatFront);
+
     float cameraSpeed = 5.0f * (float)deltaTime;
 
-    vec3d velocity = constructVec3d(0.0f, -9.81f * deltaTime, 0.0f);
-    float speed = 5.0f * deltaTime;
+    velocity->y -= 4.81f;
+    velocity->x = 0.0f;
+    velocity->z = 0.0f; 
+
+    float speed = 4.5f;
 
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
-      vec3d forwardStep = multiply(front, speed);
+      vec3d forwardStep = multiply(flatFront, speed);
       velocity = add(velocity, forwardStep);
       // setPosition(cam, add(getPosition(cam), multiply(front, cameraSpeed)));
     }
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
-      vec3d backStep = multiply(front, -speed);
+      vec3d backStep = multiply(flatFront, -speed);
       velocity = add(velocity, backStep);
       // setPosition(cam, subtract(getPosition(cam), multiply(front, cameraSpeed)));
     }
@@ -388,9 +396,23 @@ int main(){
       // setPosition(cam, add(getPosition(cam), multiply(right, cameraSpeed)));
     }
 
-    physics(game, cam, velocity);
+    // velocity->y -= 9.81f;
 
-    view = lookAt(getPosition(cam), add(getPosition(cam), front), up);
+    bool grounded = false;
+    physics(game, cam, velocity, &grounded, (float) deltaTime);
+
+    if (grounded){
+      velocity->y = 0.0f;
+      if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS){
+        velocity->y = 40.0f;
+      }
+    }
+
+    float eye_offset = 1.61f;
+    vec3d camPos = getPosition(cam);  // player base position
+    vec3d eyePos = constructVec3d(camPos->x, camPos->y + eye_offset, camPos->z);
+    view = lookAt(eyePos, add(eyePos, front), up);
+
 
     // Rendering
     // Face screen 
@@ -443,9 +465,9 @@ int main(){
     glDepthMask(GL_TRUE);
 
     // update view matrix
-    viewPos->x = getPosition(cam)->x;
-    viewPos->y = getPosition(cam)->y;
-    viewPos->z = getPosition(cam)->z;
+    viewPos->x = eyePos->x;
+    viewPos->y = eyePos->y;
+    viewPos->z = eyePos->z;
 
     float currTime = glfwGetTime();
 
@@ -461,21 +483,20 @@ int main(){
     glDrawArrays(GL_TRIANGLES, 0, 6);
     glDepthMask(GL_TRUE);
     // render world to fake screen 
-    float distance = 2 * (getPosition(cam)->y - 3.0f);
-    setYPosition(cam, getPosition(cam)->y - distance);
+    float distance = 2 * (eyePos->y - 3.0f);
+    vec3d distancePos = constructVec3d(eyePos->x, eyePos->y - distance, eyePos->z);
     setPitch(cam, -getPitch(cam));
     vec3d newUp = constructVec3d(0.0f, 1.0f, 0.0f);
-    view = lookAt(getPosition(cam), add(getPosition(cam), getFrontVector(getYaw(cam), getPitch(cam))), newUp);
-    renderWorld(game, getPosition(cam), program, waterShader, view, matProj, lightPos, viewPos, currTime, texture, true, dubTex, dudvTexture, normalTexture);
-    setYPosition(cam, getPosition(cam)->y + distance);
+    view = lookAt(distancePos, add(distancePos, getFrontVector(getYaw(cam), getPitch(cam))), newUp);
+    renderWorld(game, distancePos, program, waterShader, view, matProj, lightPos, viewPos, currTime, texture, true, dubTex, dudvTexture, normalTexture);
     setPitch(cam, -getPitch(cam));
     // reset to normal frame buffer
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-    view = lookAt(getPosition(cam), add(getPosition(cam), front), up);
+    view = lookAt(eyePos, add(eyePos, front), up);
 
     // render the world
-    renderWorld(game, getPosition(cam), program, waterShader, view, matProj, lightPos, viewPos, currTime, texture, false, dubTex, dudvTexture, normalTexture);
+    renderWorld(game, eyePos, program, waterShader, view, matProj, lightPos, viewPos, currTime, texture, false, dubTex, dudvTexture, normalTexture);
 
     // render the ui 
     glEnable(GL_BLEND);
@@ -487,7 +508,7 @@ int main(){
     glUniform1f(glGetUniformLocation(fireflyShader, "time"), glfwGetTime());
     glUniformMatrix4fv(glGetUniformLocation(fireflyShader, "matProj"), 1, GL_TRUE, (float*)matProj->m);
     glUniformMatrix4fv(glGetUniformLocation(fireflyShader, "view"), 1, GL_TRUE, (float*)view->m);
-    glUniform3f(glGetUniformLocation(fireflyShader, "cameraWorldPos"), getPosition(cam)->x,getPosition(cam)->y, getPosition(cam)->z);
+    glUniform3f(glGetUniformLocation(fireflyShader, "cameraWorldPos"), eyePos->x, eyePos->y, eyePos->z);
 
     int fireflyCount = 400;
     int tiles = (2 * 5 + 1) * (2 * 5 + 1);
