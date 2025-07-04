@@ -438,11 +438,11 @@ int main(){
     glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     // render background to fake screen 
-    // glDepthMask(GL_FALSE);
-    // glUseProgram(skyShader); 
-    // glBindVertexArray(skyVAO);
-    // glDrawArrays(GL_TRIANGLES, 0, 6);
-    // glDepthMask(GL_TRUE);
+    glDepthMask(GL_FALSE);
+    glUseProgram(skyShader); 
+    glBindVertexArray(skyVAO);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+    glDepthMask(GL_TRUE);
     // render world to fake screen 
     float distance = 2 * (getPosition(cam)->y - 3.0f);
     setYPosition(cam, getPosition(cam)->y - distance);
