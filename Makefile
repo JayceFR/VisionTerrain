@@ -2,7 +2,7 @@ CC = gcc
 CFLAGS = -Wall -Iglad/include -I../utils -I../world -I../adts
 LDFLAGS = -lglfw -ldl -lm
 
-SRC = main.c glad/glad.c utils/shader.c utils/math.c world/chunk.c world/camera.c adts/hash.c utils/stringManipulate.c world/world.c
+SRC = main.c glad/glad.c utils/shader.c utils/math.c world/chunk.c world/camera.c adts/hash.c utils/stringManipulate.c world/world.c utils/texture.c
 OBJ = $(SRC:.c=.o)
 OUT = main
 

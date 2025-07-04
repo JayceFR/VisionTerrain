@@ -4,6 +4,7 @@
 #include <time.h>
 #include <stdbool.h>
 #include <string.h>
+#include <math.h>
 
 #include "glad/glad.h"
 #include <GLFW/glfw3.h>
@@ -14,8 +15,7 @@
 #include "world/world.h"
 #include "world/camera.h"
 
-#define STB_IMAGE_IMPLEMENTATION
-#include "libs/stb_image.h"
+#include "utils/texture.h"
 
 #include <arpa/inet.h>
 
@@ -207,75 +207,10 @@ int main(){
   mat4x4 view = constructRotationY(angle);
   view->m[2][3] = -16.0f;
 
-  // load the texture 
-  int width = 64; int height = 16; int nrChannels = 3; 
-  stbi_set_flip_vertically_on_load(1);
-  unsigned char *data = stbi_load("texture/tile.png", &width, &height, &nrChannels, 0);
-  assert(data != NULL);
-
-  GLuint texture;
-  glGenTextures(1, &texture);
-  glBindTexture(GL_TEXTURE_2D, texture);
-
-  checkOpenGLError("Loading textures");
-
-  // set properties of the texture
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-  GLenum format = (nrChannels == 3) ? GL_RGB : GL_RGBA;
-  glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
-  glGenerateMipmap(GL_TEXTURE_2D);
-  stbi_image_free(data);
-
-  checkOpenGLError("depth error stuff");
-
-
-  width = 512; height = 512; nrChannels = 3; 
-  stbi_set_flip_vertically_on_load(1);
-  unsigned char *data2 = stbi_load("texture/waterDUDV.png", &width, &height, &nrChannels, 0);
-  assert(data2 != NULL);
-
-  GLuint dudvTexture;
-  glGenTextures(1, &dudvTexture);
-  glBindTexture(GL_TEXTURE_2D, dudvTexture);
-
-  checkOpenGLError("Loading textures");
-
-  // set properties of the texture
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-  format = (nrChannels == 3) ? GL_RGB : GL_RGBA;
-  glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data2);
-  glGenerateMipmap(GL_TEXTURE_2D);
-  stbi_image_free(data2);
-
-  width = 512; height = 512; nrChannels = 3; 
-  stbi_set_flip_vertically_on_load(1);
-  unsigned char *data3 = stbi_load("texture/normalMap.png", &width, &height, &nrChannels, 0);
-  assert(data3 != NULL);
-
-  GLuint normalTexture;
-  glGenTextures(1, &normalTexture);
-  glBindTexture(GL_TEXTURE_2D, normalTexture);
-
-  checkOpenGLError("Loading textures");
-
-  // set properties of the texture
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-  format = (nrChannels == 3) ? GL_RGB : GL_RGBA;
-  glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data3);
-  glGenerateMipmap(GL_TEXTURE_2D);
-  stbi_image_free(data3);
+  // load textures 
+  GLuint texture = loadTexture("texture/tile.png", 64, 16, 3);
+  GLuint dudvTexture = loadTexture("texture/waterDUDV.png", 512, 512, 3);
+  GLuint normalTexture = loadTexture("texture/normalMap.png", 512, 512, 3);
 
   glEnable(GL_DEPTH_TEST);
 
