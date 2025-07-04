@@ -49,8 +49,16 @@ void setPosition(camera cam, vec3d position){
   cam->position = position;
 }
 
+void setXPosition(camera cam, float new_x){
+  cam->position->x = new_x; 
+}
+
 void setYPosition(camera cam, float new_y){
   cam->position->y = new_y;
+}
+
+void setZPosition(camera cam, float new_z){
+  cam->position->z = new_z;
 }
 
 // Make sure to free it after usage
