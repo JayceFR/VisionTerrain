@@ -309,6 +309,11 @@ static float octaveNoise(float x, float y, float z) {
   return total / maxValue; // normalize result to approx [-1,1]
 }
 
+bool chunkBlockIsSolid(chunk c, int x, int y, int z){
+  uint8_t block = c->blocks[x][y][z];
+  return block == BLOCK_DIRT || block == BLOCK_OAK || block == BLOCK_GRASS || block == BLOCK_LEAF;
+}
+
 chunk createChunk(float x, float y, float z) {
   chunk new = malloc(sizeof(struct chunk));
   assert(new != NULL);

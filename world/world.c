@@ -26,6 +26,10 @@ static void freeChunks(void *el){
   freeChunk(c);
 }
 
+hash getChunks(world w){
+  return w->chunks;
+}
+
 world createWorld(int width, int height){
   world new = malloc(sizeof(struct world));
   assert(new != NULL);

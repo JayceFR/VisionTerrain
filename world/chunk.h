@@ -2,6 +2,8 @@
 #define CHUNK_H
 
 #include "../utils/math.h"
+#include "glad/glad.h"
+#include <GLFW/glfw3.h>
 
 #define CHUNK_SIZE_X 16
 #define CHUNK_SIZE_Y 16
@@ -41,6 +43,7 @@ typedef struct{
 } textureMap; 
 
 // functions provided
+extern bool chunkBlockIsSolid(chunk c, int x, int y, int z);
 extern chunk createChunk(float x, float y, float z);
 extern void freeChunk(chunk c);
 extern void renderChunk(

@@ -14,6 +14,7 @@
 #include "utils/math.h"
 #include "world/world.h"
 #include "world/camera.h"
+#include "world/physics.h"
 
 #include "utils/texture.h"
 
@@ -363,18 +364,31 @@ int main(){
 
     float cameraSpeed = 5.0f * (float)deltaTime;
 
+    vec3d velocity = constructVec3d(0.0f, -9.81f * deltaTime, 0.0f);
+    float speed = 5.0f * deltaTime;
+
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
-        setPosition(cam, add(getPosition(cam), multiply(front, cameraSpeed)));
+      vec3d forwardStep = multiply(front, speed);
+      velocity = add(velocity, forwardStep);
+      // setPosition(cam, add(getPosition(cam), multiply(front, cameraSpeed)));
     }
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
-        setPosition(cam, subtract(getPosition(cam), multiply(front, cameraSpeed)));
+      vec3d backStep = multiply(front, -speed);
+      velocity = add(velocity, backStep);
+      // setPosition(cam, subtract(getPosition(cam), multiply(front, cameraSpeed)));
     }
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
-        setPosition(cam, subtract(getPosition(cam), multiply(right, cameraSpeed)));
+      vec3d leftStep = multiply(right, -speed);
+      velocity = add(velocity, leftStep);
+      // setPosition(cam, subtract(getPosition(cam), multiply(right, cameraSpeed)));
     }
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
-        setPosition(cam, add(getPosition(cam), multiply(right, cameraSpeed)));
+      vec3d rightStep = multiply(right, speed);
+      velocity = add(velocity, rightStep);
+      // setPosition(cam, add(getPosition(cam), multiply(right, cameraSpeed)));
     }
+
+    physics(game, cam, velocity);
 
     view = lookAt(getPosition(cam), add(getPosition(cam), front), up);
 
