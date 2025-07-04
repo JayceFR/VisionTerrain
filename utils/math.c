@@ -156,3 +156,32 @@ vec3d subtract(vec3d u, vec3d v){
 vec3d multiply(vec3d v, float scalar) {
   return constructVec3d(v->x * scalar, v->y * scalar, v->z * scalar);
 }
+
+vec3d copyVector(vec3d v){
+  vec3d newVector = constructVec3d(v->x, v->y, v->z);
+  return newVector;
+}
+
+void setX(vec3d v, float x){
+  v->x = x; 
+}
+
+void setY(vec3d v, float y){
+  v->y = y; 
+}
+
+void setZ(vec3d v, float z){
+  v->z = z; 
+}
+
+float getX(vec3d v){
+  return v->x;
+}
+
+float getY(vec3d v){
+  return v->y;
+}
+
+float getZ(vec3d v){
+  return v->z;
+}

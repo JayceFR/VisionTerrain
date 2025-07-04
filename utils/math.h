@@ -30,6 +30,13 @@ extern vec3d cross(vec3d u, vec3d v);
 extern vec3d add(vec3d u, vec3d v);
 extern vec3d subtract(vec3d u, vec3d v);
 extern vec3d multiply(vec3d v, float scalar);
+extern vec3d copyVector(vec3d v);
+extern void setX(vec3d v, float x);
+extern void setY(vec3d v, float y);
+extern void setZ(vec3d v, float z);
+extern float getX(vec3d v);
+extern float getY(vec3d v);
+extern float getZ(vec3d v);
 // does it inplace 
 extern void normalise(vec3d u);
 extern float radians(float deg);
