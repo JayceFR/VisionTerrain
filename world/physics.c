@@ -59,36 +59,51 @@ static bool collisionCheck(world w, vec3d newPos) {
 }
 
 
+#define SUBSTEPS 4
+#define EPSILON 0.001f
+
 void physics(world w, camera cam, vec3d velocity, bool* isGrounded, float dt) {
   *isGrounded = false;
+  vec3d position = getPosition(cam);
+  vec3d stepVel = multiply(velocity, dt / SUBSTEPS);
 
-  vec3d originalPos = getPosition(cam);
-  vec3d testPos = copyVector(originalPos);
+  for (int i = 0; i < SUBSTEPS; i++) {
+    vec3d newPos = copyVector(position);
 
-  // Try Y first (gravity)
-  testPos->y += velocity->y * dt;
-  if (collisionCheck(w, testPos)) {
-    testPos->y = originalPos->y;
-    *isGrounded = true;
-    velocity->y = 0.0f;
+    // Vertical movement (Y)
+    newPos->y += stepVel->y;
+    if (collisionCheck(w, newPos)) {
+      // Try stepping just slightly off the floor
+      newPos->y = position->y;
+      if (velocity->y < 0.0f) *isGrounded = true;
+      velocity->y = 0.0f;
+    } else {
+      position->y = newPos->y;
+    }
+
+    // Horizontal X
+    newPos->x = position->x + stepVel->x;
+    if (collisionCheck(w, newPos)) {
+      newPos->x = position->x;
+      velocity->x = 0.0f;
+    } else {
+      position->x = newPos->x;
+    }
+
+    // Horizontal Z
+    newPos->z = position->z + stepVel->z;
+    if (collisionCheck(w, newPos)) {
+      newPos->z = position->z;
+      velocity->z = 0.0f;
+    } else {
+      position->z = newPos->z;
+    }
+
+    free(newPos);
   }
 
-  // X: Start from the Y-resolved position
-  testPos->x += velocity->x * dt;
-  if (collisionCheck(w, testPos)) {
-    testPos->x = originalPos->x;
-  }
-
-  // Z: Start from Y/X-resolved position
-  testPos->z += velocity->z * dt;
-  if (collisionCheck(w, testPos)) {
-    testPos->z = originalPos->z;
-  }
-
-  // Apply position at the end
-  setXPosition(cam, testPos->x);
-  setYPosition(cam, testPos->y);
-  setZPosition(cam, testPos->z);
-
-  free(testPos);
+  setXPosition(cam, position->x);
+  setYPosition(cam, position->y);
+  setZPosition(cam, position->z);
+  free(stepVel);
 }
