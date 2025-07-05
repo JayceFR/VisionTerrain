@@ -48,7 +48,6 @@ static bool collisionCheck(world w, vec3d newPos) {
         for (int y = startY; y <= endY; y++) {
           for (int z = startZ; z <= endZ; z++) {
             if (chunkBlockIsSolid(c, x, y, z)) {
-              printf("Colliding at chunk (%d, %d) (%d, %d, %d)\n", cx, cz, x, y, z);
               return true;
             }
           }
