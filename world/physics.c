@@ -59,36 +59,45 @@ static bool collisionCheck(world w, vec3d newPos) {
 }
 
 
+#define MAX_PHYSICS_STEPS 5
+
 void physics(world w, camera cam, vec3d velocity, bool* isGrounded, float dt) {
   *isGrounded = false;
 
-  vec3d originalPos = getPosition(cam);
-  vec3d testPos = copyVector(originalPos);
+  vec3d pos = getPosition(cam);
+  vec3d newPos = copyVector(pos);
 
-  // Try Y first (gravity)
-  testPos->y += velocity->y * dt;
-  if (collisionCheck(w, testPos)) {
-    testPos->y = originalPos->y;
-    *isGrounded = true;
-    velocity->y = 0.0f;
+  float subDt = dt / MAX_PHYSICS_STEPS;
+  for (int step = 0; step < MAX_PHYSICS_STEPS; step++) {
+    // Y axis
+    newPos->y += velocity->y * subDt;
+    if (collisionCheck(w, newPos)) {
+      newPos->y -= velocity->y * subDt;
+      if (velocity->y < 0.0f) {
+        *isGrounded = true;
+      }
+      velocity->y = 0.0f;
+    }
+
+    // X axis
+    newPos->x += velocity->x * subDt;
+    if (collisionCheck(w, newPos)) {
+      newPos->x -= velocity->x * subDt;
+      velocity->x = 0.0f;
+    }
+
+    // Z axis
+    newPos->z += velocity->z * subDt;
+    if (collisionCheck(w, newPos)) {
+      newPos->z -= velocity->z * subDt;
+      velocity->z = 0.0f;
+    }
   }
 
-  // X: Start from the Y-resolved position
-  testPos->x += velocity->x * dt;
-  if (collisionCheck(w, testPos)) {
-    testPos->x = originalPos->x;
-  }
+  setXPosition(cam, newPos->x);
+  setYPosition(cam, newPos->y);
+  setZPosition(cam, newPos->z);
 
-  // Z: Start from Y/X-resolved position
-  testPos->z += velocity->z * dt;
-  if (collisionCheck(w, testPos)) {
-    testPos->z = originalPos->z;
-  }
-
-  // Apply position at the end
-  setXPosition(cam, testPos->x);
-  setYPosition(cam, testPos->y);
-  setZPosition(cam, testPos->z);
-
-  free(testPos);
+  free(newPos);
 }
+
