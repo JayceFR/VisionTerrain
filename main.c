@@ -192,7 +192,7 @@ int main(){
   }
 
   // projection matrix stuff
-  float fNear        = 0.1f;
+  float fNear        = 0.05f;
   float fFar         = 1000.0f;
   float fFov         = 90.0f;
   float fAspectRatio = (float)(SCREEN_WIDTH) / (float)(SCREEN_HEIGHT);
@@ -409,9 +409,19 @@ int main(){
     }
 
     float eye_offset = 1.61f;
+    float forward_offset = 0.5f;  // tweak this to avoid clipping
+
     vec3d camPos = getPosition(cam);  // player base position
-    vec3d eyePos = constructVec3d(camPos->x, camPos->y + eye_offset, camPos->z);
-    view = lookAt(eyePos, add(eyePos, front), up);
+    vec3d camForward = getFrontVector(getYaw(cam), getPitch(cam));
+    normalise(camForward);
+
+    vec3d eyePos = constructVec3d(
+        camPos->x + camForward->x * forward_offset,
+        camPos->y + eye_offset,
+        camPos->z + camForward->z * forward_offset);
+
+    view = lookAt(eyePos, add(eyePos, camForward), up);
+
 
 
     // Rendering

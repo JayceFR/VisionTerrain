@@ -9,8 +9,8 @@
 #include "world.h"
 #include "../adts/hash.h"
 
-#define PLAYER_WIDTH 0.6f 
-#define PLAYER_HEIGHT 1.8f
+#define PLAYER_WIDTH 1.0f 
+#define PLAYER_HEIGHT 2.0f
 #define CHUNK_SIZE 16.0f 
 
 static bool collisionCheck(world w, vec3d newPos) {
@@ -22,13 +22,13 @@ static bool collisionCheck(world w, vec3d newPos) {
   float maxZ = newPos->z + PLAYER_WIDTH / 2.0f;
 
   if (minY >= 16) {
-    return false; // No collision possible above 16
+    return false;
   }
 
   int minChunkX = floor(minX / CHUNK_SIZE);
-  int maxChunkX = floor(maxX / CHUNK_SIZE);
+  int maxChunkX = ceil(maxX / CHUNK_SIZE);
   int minChunkZ = floor(minZ / CHUNK_SIZE);
-  int maxChunkZ = floor(maxZ / CHUNK_SIZE);
+  int maxChunkZ = ceil(maxZ / CHUNK_SIZE);
 
   for (int cx = minChunkX; cx <= maxChunkX; cx++) {
     for (int cz = minChunkZ; cz <= maxChunkZ; cz++) {
@@ -48,6 +48,7 @@ static bool collisionCheck(world w, vec3d newPos) {
         for (int y = startY; y <= endY; y++) {
           for (int z = startZ; z <= endZ; z++) {
             if (chunkBlockIsSolid(c, x, y, z)) {
+              printf("Colliding at chunk (%d, %d) (%d, %d, %d)\n", cx, cz, x, y, z);
               return true;
             }
           }
@@ -59,45 +60,36 @@ static bool collisionCheck(world w, vec3d newPos) {
 }
 
 
-#define MAX_PHYSICS_STEPS 5
-
 void physics(world w, camera cam, vec3d velocity, bool* isGrounded, float dt) {
   *isGrounded = false;
 
-  vec3d pos = getPosition(cam);
-  vec3d newPos = copyVector(pos);
+  vec3d originalPos = getPosition(cam);
+  vec3d testPos = copyVector(originalPos);
 
-  float subDt = dt / MAX_PHYSICS_STEPS;
-  for (int step = 0; step < MAX_PHYSICS_STEPS; step++) {
-    // Y axis
-    newPos->y += velocity->y * subDt;
-    if (collisionCheck(w, newPos)) {
-      newPos->y -= velocity->y * subDt;
-      if (velocity->y < 0.0f) {
-        *isGrounded = true;
-      }
-      velocity->y = 0.0f;
-    }
-
-    // X axis
-    newPos->x += velocity->x * subDt;
-    if (collisionCheck(w, newPos)) {
-      newPos->x -= velocity->x * subDt;
-      velocity->x = 0.0f;
-    }
-
-    // Z axis
-    newPos->z += velocity->z * subDt;
-    if (collisionCheck(w, newPos)) {
-      newPos->z -= velocity->z * subDt;
-      velocity->z = 0.0f;
-    }
+  // Try Y first (gravity)
+  testPos->y += velocity->y * dt;
+  if (collisionCheck(w, testPos)) {
+    testPos->y = originalPos->y;
+    *isGrounded = true;
+    velocity->y = 0.0f;
   }
 
-  setXPosition(cam, newPos->x);
-  setYPosition(cam, newPos->y);
-  setZPosition(cam, newPos->z);
+  // X: Start from the Y-resolved position
+  testPos->x += velocity->x * dt;
+  if (collisionCheck(w, testPos)) {
+    testPos->x = originalPos->x;
+  }
 
-  free(newPos);
+  // Z: Start from Y/X-resolved position
+  testPos->z += velocity->z * dt;
+  if (collisionCheck(w, testPos)) {
+    testPos->z = originalPos->z;
+  }
+
+  // Apply position at the end
+  setXPosition(cam, testPos->x);
+  setYPosition(cam, testPos->y);
+  setZPosition(cam, testPos->z);
+
+  free(testPos);
 }
-
