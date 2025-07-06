@@ -15,6 +15,7 @@
 #include "world/world.h"
 #include "world/camera.h"
 #include "world/physics.h"
+#include "utils/perlin.h"
 
 #include "utils/texture.h"
 
@@ -324,13 +325,18 @@ int main(){
   world game = createWorld(16, 16);
   
   // camera stuff
-  cam = constructCamera(65.7f, 13.0f, 32.3f);
+  cam = constructCamera(65.7f, 23.0f, 32.3f);
   vec3d front = getFrontVector(getYaw(cam), getPitch(cam));
   vec3d up = constructVec3d(0.0f, 1.0f, 0.0f);
   vec3d right = cross(front, up);
   normalise(right);
 
+  initPerlin();
+
   glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED); // Hide & capture mouse cursor
+  if (glfwRawMouseMotionSupported()){
+    // glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
+  }
   glfwSetCursorPosCallback(window, mouseCallback);
 
   double targetFPS = 60.0;

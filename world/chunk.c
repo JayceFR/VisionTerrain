@@ -11,6 +11,7 @@
 #include "chunk.h"
 #include "../utils/math.h"
 #include "../utils/shader.h"
+#include "../utils/perlin.h"
 
 #define STB_PERLIN_IMPLEMENTATION
 #include "../libs/stb_perlin.h"
@@ -311,7 +312,36 @@ static float octaveNoise(float x, float y, float z) {
 
 bool chunkBlockIsSolid(chunk c, int x, int y, int z){
   uint8_t block = c->blocks[x][y][z];
-  return block == BLOCK_DIRT || block == BLOCK_OAK || block == BLOCK_GRASS || block == BLOCK_LEAF;
+  return block == BLOCK_DIRT || block == BLOCK_OAK || block == BLOCK_GRASS || block == BLOCK_LEAF || block == BLOCK_WATER;
+}
+
+float islandHeight(int x, int y, int size) {
+  // Normalize coordinates to [-1, 1]
+  float nx = (2.0f * x) / (size - 1) - 1.0f;
+  float ny = (2.0f * y) / (size - 1) - 1.0f;
+
+  // Distance from center (0,0)
+  float dist = sqrtf(nx * nx + ny * ny);
+
+  // Basic radial mask to create island shape: more land near center, water near edges
+  float edgeFalloff = 1.0f - dist;
+  if (edgeFalloff < 0) edgeFalloff = 0;
+
+  // Generate base terrain noise at different frequencies for detail
+  float elevation =
+      0.6f * noise2D(4.0f * nx, 4.0f * ny) +  // base shape
+      0.3f * noise2D(8.0f * nx, 8.0f * ny) +  // detail
+      0.1f * noise2D(16.0f * nx, 16.0f * ny); // fine detail
+
+  // Normalize elevation roughly between -1 and 1 (depends on noise function)
+  // Multiply by radial mask so edges go down toward water
+  elevation *= edgeFalloff;
+
+  // Clamp elevation to [0, 1], so negative values become water (0)
+  if (elevation < 0) elevation = 0;
+  if (elevation > 1) elevation = 1;
+
+  return elevation;
 }
 
 chunk createChunk(float x, float y, float z) {
@@ -330,7 +360,9 @@ chunk createChunk(float x, float y, float z) {
 
       float normalized = noiseVal * 0.5f + 0.5f;
 
-      float heightFloat = powf(normalized, 3.0f) * 40.0f;
+      float heightFloat = powf(normalized, 3.0f) * 20.0f;
+
+      // float heightFloat = islandHeight(cx, cz, 19) * 40.0f;
 
       int maxHeight = (int) heightFloat;
 
