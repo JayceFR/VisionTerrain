@@ -1,5 +1,5 @@
-#include <math.h>
 #include <stdint.h>
+#include <math.h>
 
 static int perm[512];
 

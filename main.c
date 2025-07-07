@@ -6,8 +6,12 @@
 #include <string.h>
 #include <math.h>
 
-#include "glad/glad.h"
-#include <GLFW/glfw3.h>
+#ifndef __EMSCRIPTEN__
+  #include "glad/glad.h"
+#else
+  #include <GLES3/gl3.h>
+#endif
+#include <GLFW/glfw3.h> 
 
 #include "main.h"
 #include "utils/shader.h"
@@ -18,8 +22,6 @@
 #include "utils/perlin.h"
 
 #include "utils/texture.h"
-
-#include <arpa/inet.h>
 
 #ifdef __EMSCRIPTEN__
   #include <emscripten/emscripten.h>
@@ -38,16 +40,22 @@ void checkOpenGLError(const char* context) {
   }
 }
 
-void sleepSeconds(double seconds) {
+void sleepSeconds(double seconds){
+#ifdef __EMSCRIPTEN__
+  // No sleep or use emscripten_sleep if async:
+  // For synchronous wait, do nothing or busy-wait (not recommended)
+#else
   #ifdef _WIN32
-      Sleep((DWORD)(seconds * 1000));
+    Sleep((DWORD)(seconds * 1000));
   #else
-      struct timespec ts;
-      ts.tv_sec = (time_t)seconds;
-      ts.tv_nsec = (long)((seconds - ts.tv_sec) * 1e9);
-      nanosleep(&ts, NULL);
+    struct timespec ts;
+    ts.tv_sec  = (time_t)seconds;
+    ts.tv_nsec = (long)((seconds - ts.tv_sec) * 1e9);
+    nanosleep(&ts, NULL);
   #endif
+#endif
 }
+
 
 static bool firstMouse = true;
 static double lastX = SCREEN_WIDTH / 2.0;
@@ -91,37 +99,37 @@ typedef struct { float x, y, z; } Point3D;
 #define MAX_LANDMARKS 32
 
 bool getFaceData(Point3D* outPoints, int* outCount, float* yaw, float* pitch) {
-  static int sockfd = -1;
-  static struct sockaddr_in addr;
+  // static int sockfd = -1;
+  // static struct sockaddr_in addr;
 
-  if (sockfd < 0) {
-      sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-      addr.sin_family = AF_INET;
-      addr.sin_port = htons(5005);
-      addr.sin_addr.s_addr = INADDR_ANY;
-      bind(sockfd, (struct sockaddr*)&addr, sizeof(addr));
-  }
+  // if (sockfd < 0) {
+  //     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+  //     addr.sin_family = AF_INET;
+  //     addr.sin_port = htons(5005);
+  //     addr.sin_addr.s_addr = INADDR_ANY;
+  //     bind(sockfd, (struct sockaddr*)&addr, sizeof(addr));
+  // }
 
-  char buffer[512];
-  ssize_t len = recv(sockfd, buffer, sizeof(buffer), MSG_DONTWAIT);
-  if (len <= 0) return false;
+  // char buffer[512];
+  // ssize_t len = recv(sockfd, buffer, sizeof(buffer), MSG_DONTWAIT);
+  // if (len <= 0) return false;
 
-  int floatCount = len / sizeof(float);
-  if (floatCount < 2) return false;
+  // int floatCount = len / sizeof(float);
+  // if (floatCount < 2) return false;
 
-  float* floats = (float*)buffer;
-  int landmarkCount = (floatCount - 2) / 3;
+  // float* floats = (float*)buffer;
+  // int landmarkCount = (floatCount - 2) / 3;
 
-  if (landmarkCount > MAX_LANDMARKS) landmarkCount = MAX_LANDMARKS;
+  // if (landmarkCount > MAX_LANDMARKS) landmarkCount = MAX_LANDMARKS;
 
-  for (int i = 0; i < landmarkCount; ++i) {
-      outPoints[i] = (Point3D){ floats[i * 3 + 0], floats[i * 3 + 1], floats[i * 3 + 2] };
-  }
+  // for (int i = 0; i < landmarkCount; ++i) {
+  //     outPoints[i] = (Point3D){ floats[i * 3 + 0], floats[i * 3 + 1], floats[i * 3 + 2] };
+  // }
 
-  *yaw = floats[landmarkCount * 3];
-  *pitch = floats[landmarkCount * 3 + 1];
-  *outCount = landmarkCount;
-  return true;
+  // *yaw = floats[landmarkCount * 3];
+  // *pitch = floats[landmarkCount * 3 + 1];
+  // *outCount = landmarkCount;
+  return false;
 }
 
 void initFBO(int width, int height, GLuint *fbo, GLuint *fboTex, GLuint *fboDepth) {
@@ -150,12 +158,242 @@ void initFBO(int width, int height, GLuint *fbo, GLuint *fboTex, GLuint *fboDept
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
+typedef struct LoopCtx {
+  double lastFrameTime;
+  double frameTime;
+  vec3d front;
+  vec3d right; 
+  vec3d up;
+  GLFWwindow* window;
+  vec3d velocity;
+  vec3d viewPos;
+  vec3d lightPos; 
+  world game;
+  mat4x4 view;
+  GLuint fbo;
+  GLuint faceVBO;
+  GLuint faceVAO;
+  GLuint skyVAO;
+  GLuint dubFbo;
+  mat4x4 matProj;
+  GLuint texture;
+  GLuint dubTex;
+  GLuint dudvTexture;
+  GLuint normalTexture;
+  GLuint fireflyVAO; 
+  GLuint fboTex; 
+  GLuint screenVAO;
+  GLuint program;   
+  GLuint waterShader;
+  GLuint skyShader; 
+  GLuint fireflyShader;
+  GLuint faceShader;
+  GLuint facyShader;
+} LoopCtx;
+
+static void main_loop(void *arg) {
+  LoopCtx *ctx = (LoopCtx *) arg;
+  double now = glfwGetTime();
+  double deltaTime = now - ctx->lastFrameTime;
+
+  if (deltaTime < ctx->frameTime) {
+      // Sleep remaining time to avoid busy wait
+      sleepSeconds(ctx->frameTime - deltaTime);
+      return;
+  }
+
+  ctx->lastFrameTime = now;
+
+  glfwPollEvents();
+  free(ctx->front);
+  ctx->front = getFrontVector(getYaw(cam), getPitch(cam));
+  free(ctx->right);
+  ctx->right = cross(ctx->front, ctx->up);
+  normalise(ctx->right);
+
+  vec3d flatFront = constructVec3d(ctx->front->x, 0.0f, ctx->front->z);
+  normalise(flatFront);
+
+  float cameraSpeed = 5.0f * (float)deltaTime;
+
+  ctx->velocity->y -= 4.81f;
+  ctx->velocity->x = 0.0f;
+  ctx->velocity->z = 0.0f; 
+
+  float speed = 4.5f;
+
+  if (glfwGetKey(ctx->window, GLFW_KEY_W) == GLFW_PRESS) {
+    vec3d forwardStep = multiply(flatFront, speed);
+    ctx->velocity = add(ctx->velocity, forwardStep);
+    // setPosition(cam, add(getPosition(cam), multiply(front, cameraSpeed)));
+  }
+  if (glfwGetKey(ctx->window, GLFW_KEY_S) == GLFW_PRESS) {
+    vec3d backStep = multiply(flatFront, -speed);
+    ctx->velocity = add(ctx->velocity, backStep);
+    // setPosition(cam, subtract(getPosition(cam), multiply(front, cameraSpeed)));
+  }
+  if (glfwGetKey(ctx->window, GLFW_KEY_A) == GLFW_PRESS) {
+    vec3d leftStep = multiply(ctx->right, -speed);
+    ctx->velocity = add(ctx->velocity, leftStep);
+    // setPosition(cam, subtract(getPosition(cam), multiply(right, cameraSpeed)));
+  }
+  if (glfwGetKey(ctx->window, GLFW_KEY_D) == GLFW_PRESS) {
+    vec3d rightStep = multiply(ctx->right, speed);
+    ctx->velocity = add(ctx->velocity, rightStep);
+    // setPosition(cam, add(getPosition(cam), multiply(right, cameraSpeed)));
+  }
+
+  // velocity->y -= 9.81f;
+
+  bool grounded = false;
+  physics(ctx->game, cam, ctx->velocity, &grounded, (float) deltaTime);
+
+  if (grounded){
+    ctx->velocity->y = 0.0f;
+    if (glfwGetKey(ctx->window, GLFW_KEY_SPACE) == GLFW_PRESS){
+      ctx->velocity->y = 40.0f;
+    }
+  }
+
+  float eye_offset = 1.61f;
+  float forward_offset = 0.5f;  // tweak this to avoid clipping
+
+  vec3d camPos = getPosition(cam);  // player base position
+  vec3d camForward = getFrontVector(getYaw(cam), getPitch(cam));
+  normalise(camForward);
+
+  vec3d eyePos = constructVec3d(
+      camPos->x + camForward->x * forward_offset,
+      camPos->y + eye_offset,
+      camPos->z + camForward->z * forward_offset);
+
+  ctx->view = lookAt(eyePos, add(eyePos, camForward), ctx->up);
+
+
+
+  // Rendering
+  // Face screen 
+  glBindFramebuffer(GL_FRAMEBUFFER, ctx->fbo);
+  glViewport(0, 0, 256, 256);
+  glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+  // render to the fbo
+  Point3D facePoints[MAX_LANDMARKS];
+  int facePointCount = 0;
+  float yaw = 0.0f, pitch = 0.0f;
+
+  if (getFaceData(facePoints, &facePointCount, &yaw, &pitch)) {
+    for (int i = 0; i < facePointCount; ++i) {
+      Point3D p = facePoints[i];
+      p.x = p.x * 2.0f - 1.0f;
+      p.y = 1.0f - p.y * 2.0f;
+      p.z = 0.0f;
+      facePoints[i] = p;
+    }
+
+    glBindBuffer(GL_ARRAY_BUFFER, ctx->faceVBO);
+    glBufferData(GL_ARRAY_BUFFER, facePointCount * sizeof(Point3D), facePoints, GL_DYNAMIC_DRAW);
+    setYaw(cam, yaw * 180.0f / 3.14159f);
+    setPitch(cam, pitch * 180.0f / 3.14159f);
+
+    glBindVertexArray(ctx->faceVAO);
+    glUseProgram(ctx->facyShader);
+    glPointSize(10.0f);
+    glDrawArrays(GL_POINTS, 0, facePointCount);
+    glPointSize(1.0f);
+    glBindVertexArray(0);
+  }
+
+    // reset stuff
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+
+  // Main screen 
+  // Clear screen 
+  glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+  // Render the background
+  glDepthMask(GL_FALSE);
+  glUseProgram(ctx->skyShader); 
+  glBindVertexArray(ctx->skyVAO);
+  glDrawArrays(GL_TRIANGLES, 0, 6);
+  glDepthMask(GL_TRUE);
+
+  // update view matrix
+  ctx->viewPos->x = eyePos->x;
+  ctx->viewPos->y = eyePos->y;
+  ctx->viewPos->z = eyePos->z;
+  float currTime = glfwGetTime();
+
+  // fake screen 
+  glBindFramebuffer(GL_FRAMEBUFFER, ctx->dubFbo);
+  glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+  glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  // render background to fake screen 
+  glDepthMask(GL_FALSE);
+  glUseProgram(ctx->skyShader); 
+  glBindVertexArray(ctx->skyVAO);
+  glDrawArrays(GL_TRIANGLES, 0, 6);
+  glDepthMask(GL_TRUE);
+  // render world to fake screen 
+  float distance = 2 * (eyePos->y - 3.0f);
+  vec3d distancePos = constructVec3d(eyePos->x, eyePos->y - distance, eyePos->z);
+  setPitch(cam, -getPitch(cam));
+  vec3d newUp = constructVec3d(0.0f, 1.0f, 0.0f);
+  ctx->view = lookAt(distancePos, add(distancePos, getFrontVector(getYaw(cam), getPitch(cam))), newUp);
+
+  renderWorld(ctx->game, distancePos, ctx->program, ctx->waterShader, ctx->view, ctx->matProj, ctx->lightPos, ctx->viewPos, currTime, ctx->texture, true, ctx->dubTex, ctx->dudvTexture, ctx->normalTexture);
+  setPitch(cam, -getPitch(cam));
+  // reset to normal frame buffer
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+  ctx->view = lookAt(eyePos, add(eyePos, ctx->front), ctx->up);
+
+  // render the world
+  renderWorld(ctx->game, eyePos, ctx->program, ctx->waterShader, ctx->view, ctx->matProj, ctx->lightPos, ctx->viewPos, currTime, ctx->texture, false, ctx->dubTex, ctx->dudvTexture, ctx->normalTexture);
+
+  // render the ui 
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  glDepthMask(GL_FALSE);
+  glUseProgram(ctx->fireflyShader); 
+  glBindVertexArray(ctx->fireflyVAO);
+
+  glUniform1f(glGetUniformLocation(ctx->fireflyShader, "time"), glfwGetTime());
+  glUniformMatrix4fv(glGetUniformLocation(ctx->fireflyShader, "matProj"), 1, GL_TRUE, (float*)ctx->matProj->m);
+  glUniformMatrix4fv(glGetUniformLocation(ctx->fireflyShader, "view"), 1, GL_TRUE, (float*)ctx->view->m);
+  glUniform3f(glGetUniformLocation(ctx->fireflyShader, "cameraWorldPos"), eyePos->x, eyePos->y, eyePos->z);
+
+  int fireflyCount = 400;
+  int tiles = (2 * 5 + 1) * (2 * 5 + 1);
+  glPointSize(2.0f);
+  glDrawArrays(GL_POINTS, 0, fireflyCount * tiles);
+  glPointSize(1.0f);
+  glDepthMask(GL_TRUE);
+  glDisable(GL_BLEND);
+
+  glUseProgram(ctx->faceShader);
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, ctx->fboTex);
+  glUniform1i(glGetUniformLocation(ctx->faceShader, "screenTex"), 0);
+
+  glBindVertexArray(ctx->screenVAO);
+  glDrawArrays(GL_TRIANGLES, 0, 6);
+
+  checkOpenGLError("In loop");
+
+  glfwSwapBuffers(ctx->window);
+}
 
 int main(){
   if (!glfwInit()){
     fprintf(stderr, "Failed to initilaise GLFW window");
     exit(1);
   }
+
 
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -170,10 +408,12 @@ int main(){
   }
   glfwMakeContextCurrent(window);
 
+  #ifndef __EMSCRIPTEN__
   if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
     fprintf(stderr, "Failed to initialize GLAD\n");
     return EXIT_FAILURE;
   }
+  #endif
 
   glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
   glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
@@ -229,7 +469,6 @@ int main(){
   checkOpenGLError("depth error stuff");
 
   // The background
-
   float quadVertices[] = {
     -1.0f,  1.0f,
     -1.0f, -1.0f,
@@ -356,201 +595,47 @@ int main(){
   glEnable(GL_FRAMEBUFFER_SRGB);
 
   // GAME loop
-  while (!glfwWindowShouldClose(window)) {
-    double now = glfwGetTime();
-    double deltaTime = now - lastFrameTime;
 
-    if (deltaTime < frameTime) {
-        // Sleep remaining time to avoid busy wait
-        sleepSeconds(frameTime - deltaTime);
-        continue;
+  static LoopCtx ctx;           /* lives for the whole run */
+  ctx.lastFrameTime  = lastFrameTime;
+  ctx.frameTime      = frameTime;
+  ctx.window         = window;
+  ctx.front          = front;
+  ctx.right          = right;
+  ctx.up             = up;
+  ctx.velocity       = velocity;
+  ctx.viewPos        = viewPos;
+  ctx.lightPos       = lightPos;
+  ctx.game           = game;
+  ctx.view           = view;
+  ctx.matProj        = matProj;
+  ctx.fbo            = fbo;
+  ctx.faceVBO        = faceVBO;
+  ctx.faceVAO        = faceVAO;
+  ctx.skyVAO         = skyVAO;
+  ctx.dubFbo         = dubFbo;
+  ctx.texture        = texture;
+  ctx.dubTex         = dubTex;
+  ctx.dudvTexture    = dudvTexture;
+  ctx.normalTexture  = normalTexture;
+  ctx.fireflyVAO     = fireflyVAO;
+  ctx.fboTex         = fboTex;
+  ctx.screenVAO      = screenVAO;
+  ctx.program        = program;
+  ctx.waterShader    = waterShader;
+  ctx.skyShader      = skyShader;
+  ctx.fireflyShader  = fireflyShader;
+  ctx.faceShader     = faceShader;
+  ctx.facyShader     = facyShader;
+
+  #ifdef __EMSCRIPTEN__
+    emscripten_set_main_loop_arg(main_loop, &ctx, 0, 1);
+  #else
+    while (!glfwWindowShouldClose(window)) {
+      main_loop(&ctx);
     }
+  #endif
 
-    lastFrameTime = now;
-
-    glfwPollEvents();
-    free(front);
-    front = getFrontVector(getYaw(cam), getPitch(cam));
-    free(right);
-    right = cross(front, up);
-    normalise(right);
-
-    vec3d flatFront = constructVec3d(front->x, 0.0f, front->z);
-    normalise(flatFront);
-
-    float cameraSpeed = 5.0f * (float)deltaTime;
-
-    velocity->y -= 4.81f;
-    velocity->x = 0.0f;
-    velocity->z = 0.0f; 
-
-    float speed = 4.5f;
-
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
-      vec3d forwardStep = multiply(flatFront, speed);
-      velocity = add(velocity, forwardStep);
-      // setPosition(cam, add(getPosition(cam), multiply(front, cameraSpeed)));
-    }
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
-      vec3d backStep = multiply(flatFront, -speed);
-      velocity = add(velocity, backStep);
-      // setPosition(cam, subtract(getPosition(cam), multiply(front, cameraSpeed)));
-    }
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
-      vec3d leftStep = multiply(right, -speed);
-      velocity = add(velocity, leftStep);
-      // setPosition(cam, subtract(getPosition(cam), multiply(right, cameraSpeed)));
-    }
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
-      vec3d rightStep = multiply(right, speed);
-      velocity = add(velocity, rightStep);
-      // setPosition(cam, add(getPosition(cam), multiply(right, cameraSpeed)));
-    }
-
-    // velocity->y -= 9.81f;
-
-    bool grounded = false;
-    physics(game, cam, velocity, &grounded, (float) deltaTime);
-
-    if (grounded){
-      velocity->y = 0.0f;
-      if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS){
-        velocity->y = 40.0f;
-      }
-    }
-
-    float eye_offset = 1.61f;
-    float forward_offset = 0.5f;  // tweak this to avoid clipping
-
-    vec3d camPos = getPosition(cam);  // player base position
-    vec3d camForward = getFrontVector(getYaw(cam), getPitch(cam));
-    normalise(camForward);
-
-    vec3d eyePos = constructVec3d(
-        camPos->x + camForward->x * forward_offset,
-        camPos->y + eye_offset,
-        camPos->z + camForward->z * forward_offset);
-
-    view = lookAt(eyePos, add(eyePos, camForward), up);
-
-
-
-    // Rendering
-    // Face screen 
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-    glViewport(0, 0, 256, 256);
-    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    // render to the fbo
-    Point3D facePoints[MAX_LANDMARKS];
-    int facePointCount = 0;
-    float yaw = 0.0f, pitch = 0.0f;
-
-    if (getFaceData(facePoints, &facePointCount, &yaw, &pitch)) {
-      for (int i = 0; i < facePointCount; ++i) {
-        Point3D p = facePoints[i];
-        p.x = p.x * 2.0f - 1.0f;
-        p.y = 1.0f - p.y * 2.0f;
-        p.z = 0.0f;
-        facePoints[i] = p;
-      }
-
-      glBindBuffer(GL_ARRAY_BUFFER, faceVBO);
-      glBufferData(GL_ARRAY_BUFFER, facePointCount * sizeof(Point3D), facePoints, GL_DYNAMIC_DRAW);
-      setYaw(cam, yaw * 180.0f / 3.14159f);
-      setPitch(cam, pitch * 180.0f / 3.14159f);
-
-      glBindVertexArray(faceVAO);
-      glUseProgram(facyShader);
-      glPointSize(10.0f);
-      glDrawArrays(GL_POINTS, 0, facePointCount);
-      glPointSize(1.0f);
-      glBindVertexArray(0);
-    }
-
-    // reset stuff
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-
-    // Main screen 
-    // Clear screen 
-    glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    // Render the background
-    glDepthMask(GL_FALSE);
-    glUseProgram(skyShader); 
-    glBindVertexArray(skyVAO);
-    glDrawArrays(GL_TRIANGLES, 0, 6);
-    glDepthMask(GL_TRUE);
-
-    // update view matrix
-    viewPos->x = eyePos->x;
-    viewPos->y = eyePos->y;
-    viewPos->z = eyePos->z;
-
-    float currTime = glfwGetTime();
-
-    // fake screen 
-    glBindFramebuffer(GL_FRAMEBUFFER, dubFbo);
-    glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    // render background to fake screen 
-    glDepthMask(GL_FALSE);
-    glUseProgram(skyShader); 
-    glBindVertexArray(skyVAO);
-    glDrawArrays(GL_TRIANGLES, 0, 6);
-    glDepthMask(GL_TRUE);
-    // render world to fake screen 
-    float distance = 2 * (eyePos->y - 3.0f);
-    vec3d distancePos = constructVec3d(eyePos->x, eyePos->y - distance, eyePos->z);
-    setPitch(cam, -getPitch(cam));
-    vec3d newUp = constructVec3d(0.0f, 1.0f, 0.0f);
-    view = lookAt(distancePos, add(distancePos, getFrontVector(getYaw(cam), getPitch(cam))), newUp);
-    renderWorld(game, distancePos, program, waterShader, view, matProj, lightPos, viewPos, currTime, texture, true, dubTex, dudvTexture, normalTexture);
-    setPitch(cam, -getPitch(cam));
-    // reset to normal frame buffer
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-    view = lookAt(eyePos, add(eyePos, front), up);
-
-    // render the world
-    renderWorld(game, eyePos, program, waterShader, view, matProj, lightPos, viewPos, currTime, texture, false, dubTex, dudvTexture, normalTexture);
-
-    // render the ui 
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glDepthMask(GL_FALSE);
-    glUseProgram(fireflyShader); 
-    glBindVertexArray(fireflyVAO);
-
-    glUniform1f(glGetUniformLocation(fireflyShader, "time"), glfwGetTime());
-    glUniformMatrix4fv(glGetUniformLocation(fireflyShader, "matProj"), 1, GL_TRUE, (float*)matProj->m);
-    glUniformMatrix4fv(glGetUniformLocation(fireflyShader, "view"), 1, GL_TRUE, (float*)view->m);
-    glUniform3f(glGetUniformLocation(fireflyShader, "cameraWorldPos"), eyePos->x, eyePos->y, eyePos->z);
-
-    int fireflyCount = 400;
-    int tiles = (2 * 5 + 1) * (2 * 5 + 1);
-    glPointSize(2.0f);
-    glDrawArrays(GL_POINTS, 0, fireflyCount * tiles);
-    glPointSize(1.0f);
-    glDepthMask(GL_TRUE);
-    glDisable(GL_BLEND);
-
-    glUseProgram(faceShader);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, fboTex);
-    glUniform1i(glGetUniformLocation(faceShader, "screenTex"), 0);
-
-    glBindVertexArray(screenVAO);
-    glDrawArrays(GL_TRIANGLES, 0, 6);
-
-    checkOpenGLError("In loop");
-
-    glfwSwapBuffers(window);
-  }
 
 
   freeWorld(game);
