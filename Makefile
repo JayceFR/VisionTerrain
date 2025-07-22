@@ -3,7 +3,7 @@
 ###############################################################################
 INCLUDE_DIRS = -Iglad/include -Iutils -Iworld -Iadts -Ilibs
 CSTD         = -std=gnu99           # <- gives tanf(), sinf() prototypes
-CFLAGS       = $(CSTD) -Wall $(INCLUDE_DIRS)
+CFLAGS = $(CSTD) -D_GNU_SOURCE -Wall $(INCLUDE_DIRS)
 
 SRC = \
   main.c \
@@ -58,7 +58,7 @@ $(WEB_DIR):
 	mkdir -p $@
 
 $(WEB_HTML): $(WEB_SRC) | $(WEB_DIR)
-	$(WASM_CC) $(WEB_SRC) $(CFLAGS) $(WEB_FLAGS) -o $@
+	$(WASM_CC) $(WEB_SRC) $(CFLAGS) -o $@ $(WEB_ASSETS) -lm
 
 ###############################################################################
 #  Helpers
